@@ -89,9 +89,19 @@ public class MetodoPagoController {
      * Edita un método de pago existente.
      * PUT /api/metodos-pago
      */
-    @PutMapping
-    public ResponseEntity<MetodoPagoSalida> editar(@Valid @RequestBody MetodoPagoModificar metodoPagoModificar) {
+    /**
+     * Edita un método de pago existente.
+     * PUT /api/metodos-pago/{id}
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<MetodoPagoSalida> editar(
+            @PathVariable Integer id,
+            @Valid @RequestBody MetodoPagoModificar metodoPagoModificar) {
+
         try {
+            // Establecer el ID del path en el DTO para el servicio
+            metodoPagoModificar.setId(id);
+
             MetodoPagoSalida metodoPagoEditado = metodoPagoService.editar(metodoPagoModificar);
             return ResponseEntity.ok(metodoPagoEditado);
         } catch (RuntimeException e) {

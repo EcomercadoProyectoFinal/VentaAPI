@@ -10,10 +10,9 @@ import java.util.List;
 
 public interface IVentaService {
 
-    /** Obtiene todas las ventas. */
     List<VentaSalida> obtenerTodas();
 
-    /** Obtiene todas las ventas con paginación. */
+    /** Obtiene todas las ventas con paginación y orden DESC por ID. */
     Page<VentaSalida> obtenerTodasPaginadas(Pageable pageable);
 
     /** Obtiene una venta por su ID. */
@@ -22,16 +21,14 @@ public interface IVentaService {
     /** Crea una nueva venta. */
     VentaSalida crear(VentaGuardar ventaGuardar);
 
-    // --- Operaciones de Búsqueda por Rol (Para Vistas) ---
+    /** Obtiene el historial de compras de un cliente específico con paginación. */
+    Page<VentaSalida> obtenerVentasPorClientePaginado(Long usuarioId, Pageable pageable);
 
-    /** Obtiene el historial de compras de un cliente específico. */
-    List<VentaSalida> obtenerVentasPorCliente(Long usuarioId);
+    /** Obtiene todas las ventas realizadas por una empresa específica con paginación. */
+    Page<VentaSalida> obtenerVentasPorEmpresaPaginado(Long idEmpresaVendedora, Pageable pageable);
 
-    /** Obtiene todas las ventas realizadas por una empresa específica. */
-    List<VentaSalida> obtenerVentasPorEmpresa(Long idEmpresaVendedora);
-
-    /** Obtiene las ventas gestionadas por un broker específico. */
-    List<VentaSalida> obtenerVentasPorBroker(Long idBroker);
+    /** Obtiene las ventas gestionadas por un broker específico con paginación. */
+    Page<VentaSalida> obtenerVentasPorBrokerPaginado(Long idBroker, Pageable pageable);
 
     /**
      * Busca una venta por su correlativo (número de factura).

@@ -1,25 +1,34 @@
 package org.esfe.repositorios;
 
 import org.esfe.modelos.Venta;
+import org.springframework.data.domain.Page; // Importar Page
+import org.springframework.data.domain.Pageable; // Importar Pageable
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Optional;
+import java.util.Optional; // Importar Optional (para búsquedas por ID o Correlativo)
 
-public interface IVentaRepository extends JpaRepository<Venta, Interger> {
-    List<Venta> findByUsuarioId(Long usuarioId);
+public interface IVentaRepository extends JpaRepository<Venta, Integer> {
+    /** Obtiene las ventas de un cliente (usuario) con paginación. */
+    Page<Venta> findByUsuarioId(Long usuarioId, Pageable pageable);
 
-    // Para que la empresa vea sus ventas
-    List<Venta> findByIdEmpresaVendedora(Long idEmpresaVendedora);
+    /** Obtiene las ventas realizadas por una empresa con paginación. */
+    Page<Venta> findByIdEmpresaVendedora(Long idEmpresaVendedora, Pageable pageable);
 
-    // Para que el broker vea las ventas que gestionó
-    List<Venta> findByIdBroker(Long idBroker);
+    /** Obtiene las ventas gestionadas por un broker con paginación. */
+    Page<Venta> findByIdBroker(Long idBroker, Pageable pageable);
 
-    Optional<Venta> findByIdEmpresaVendedoraAndEstado(Long idEmpresaVendedora, String estado);
+    // 2. BÚSQUEDA COMBINADA PAGINADA
+    /** Obtiene las ventas de una empresa filtradas por un estado y con paginación. */
+    Page<Venta> findByIdEmpresaVendedoraAndEstado(Long idEmpresaVendedora, String estado, Pageable pageable);
 
+    // 3. BÚSQUEDA POR CORRELATIVO (ÚNICO)
+    /** Busca una venta por su correlativo*/
     Optional<Venta> findByCorrelativo(String correlativo);
+
+    // 4. MÉTODOS DE ACTUALIZACIÓN
     /**
      * Confirma o revierte el estado de pago por parte de la empresa.
      * @param id El ID de la venta.

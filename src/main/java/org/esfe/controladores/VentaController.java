@@ -53,15 +53,16 @@ public class VentaController {
     public ResponseEntity<VentaSalida> crear(@Valid @RequestBody VentaGuardar ventaGuardar) {
         try {
             VentaSalida nuevaVenta = ventaService.crear(ventaGuardar);
-            // Retorna 201 Created
             return new ResponseEntity<>(nuevaVenta, HttpStatus.CREATED);
-        } catch (RuntimeException e) {
-            // Manejar errores de negocio (ej: MétodoPago no encontrado)
+        } catch (Exception e) { // Capturará *cualquier* error, incluyendo SQL o ModelMapper
+            // 💡 IMPRIME EL ERROR COMPLETO
+            e.printStackTrace();
+            System.err.println("Mensaje de error: " + e.getMessage());
             return ResponseEntity.badRequest().build();
         }
     }
 
-    //  BÚSQUEDAS POR ROL (Utilizando IDs de la sesión) 
+    // BÚSQUEDAS POR ROL (Utilizando IDs de la sesión)
 
     /**
      * CLIENTE: Obtiene las compras de un usuario/cliente específico.
@@ -70,7 +71,7 @@ public class VentaController {
     public ResponseEntity<Page<VentaSalida>> mostrarVentasPorClientePaginado(
             @PathVariable Long usuarioId,
             Pageable pageable) { // Spring lo inyecta automáticamente de los Query Params
-        
+
         Page<VentaSalida> ventas = ventaService.obtenerVentasPorClientePaginado(usuarioId, pageable);
         if (ventas.hasContent()) {
             return ResponseEntity.ok(ventas);
@@ -86,7 +87,7 @@ public class VentaController {
     public ResponseEntity<Page<VentaSalida>> mostrarVentasPorEmpresaPaginado(
             @PathVariable Long idEmpresaVendedora,
             Pageable pageable) {
-        
+
         Page<VentaSalida> ventas = ventaService.obtenerVentasPorEmpresaPaginado(idEmpresaVendedora, pageable);
         if (ventas.hasContent()) {
             return ResponseEntity.ok(ventas);
@@ -102,7 +103,7 @@ public class VentaController {
     public ResponseEntity<Page<VentaSalida>> mostrarVentasPorBrokerPaginado(
             @PathVariable Long idBroker,
             Pageable pageable) {
-        
+
         Page<VentaSalida> ventas = ventaService.obtenerVentasPorBrokerPaginado(idBroker, pageable);
         if (ventas.hasContent()) {
             return ResponseEntity.ok(ventas);
@@ -110,7 +111,7 @@ public class VentaController {
         return ResponseEntity.noContent().build();
     }
 
-    //  OPERACIONES DE NEGOCIO (EMPRESA) 
+    // OPERACIONES DE NEGOCIO (EMPRESA)
 
     /**
      * Búsqueda de Venta por Correlativo (para confirmación de pago).
@@ -144,7 +145,8 @@ public class VentaController {
     }
 
     /**
-     * Actualiza el estado de la venta (e.g., "ENVIADA", "CANCELADA") (Solo para Empresa).
+     * Actualiza el estado de la venta (e.g., "ENVIADA", "CANCELADA") (Solo para
+     * Empresa).
      */
     @PutMapping("/{id}/estado/{nuevoEstado}")
     public ResponseEntity<VentaSalida> actualizarEstadoVenta(

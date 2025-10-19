@@ -34,6 +34,5 @@ public class DetalleVenta {
     @NotNull
     private BigDecimal precioUnitario; 
     
-    @NotNull
     private BigDecimal subtotal; 
 }

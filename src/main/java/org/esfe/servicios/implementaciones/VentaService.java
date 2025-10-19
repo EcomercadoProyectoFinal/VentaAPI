@@ -105,6 +105,8 @@ public class VentaService implements IVentaService {
         List<DetalleVenta> detallesVenta = ventaGuardar.getDetalles().stream()
             .map(detalleDto -> {
                 DetalleVenta detalle = modelMapper.map(detalleDto, DetalleVenta.class);
+
+                detalle.setId(null);
                 
                 // Cálculo del subtotal: cantidad * precioUnitario
                 BigDecimal subtotal = detalle.getPrecioUnitario().multiply(new BigDecimal(detalle.getCantidad()));

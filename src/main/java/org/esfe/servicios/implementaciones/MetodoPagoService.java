@@ -6,6 +6,7 @@ import org.esfe.dtos.metodopago.MetodoPagoSalida;
 import org.esfe.modelos.MetodoPago;
 import org.esfe.repositorios.IMetodoPagoRepository;
 import org.esfe.servicios.interfaces.IMetodoPagoService;
+import org.esfe.excepciones.RecursoNoEncontradoException; // Importar la excepción
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -28,7 +29,7 @@ public class MetodoPagoService implements IMetodoPagoService {
     @Override
     public MetodoPagoSalida crear(MetodoPagoGuardar metodoPagoGuardar) {
         MetodoPago metodoPago = modelMapper.map(metodoPagoGuardar, MetodoPago.class);
-        metodoPago.setId(null); // Asegurar que es una nueva entidad
+        metodoPago.setId(null); 
         metodoPago = metodoPagoRepository.save(metodoPago);
         return modelMapper.map(metodoPago, MetodoPagoSalida.class);
     }
@@ -36,7 +37,7 @@ public class MetodoPagoService implements IMetodoPagoService {
     @Override
     public MetodoPagoSalida editar(MetodoPagoModificar metodoPagoModificar) {
         MetodoPago metodoPagoExistente = metodoPagoRepository.findById(metodoPagoModificar.getId())
-                .orElseThrow(() -> new RuntimeException("Método de Pago no encontrado con ID: " + metodoPagoModificar.getId()));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Método de Pago no encontrado con ID: " + metodoPagoModificar.getId()));
 
         modelMapper.map(metodoPagoModificar, metodoPagoExistente);
         metodoPagoExistente = metodoPagoRepository.save(metodoPagoExistente);
@@ -47,7 +48,7 @@ public class MetodoPagoService implements IMetodoPagoService {
     @Override
     public void eliminarPorId(Integer id) {
         if (!metodoPagoRepository.existsById(id)) {
-            throw new RuntimeException("Método de Pago no encontrado con ID: " + id);
+            throw new RecursoNoEncontradoException("Método de Pago no encontrado con ID: " + id);
         }
         metodoPagoRepository.deleteById(id);
     }
@@ -55,7 +56,7 @@ public class MetodoPagoService implements IMetodoPagoService {
     @Override
     public MetodoPagoSalida obtenerPorId(Integer id) {
         MetodoPago metodoPago = metodoPagoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Método de Pago no encontrado"));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Método de Pago no encontrado con ID: " + id));
 
         return modelMapper.map(metodoPago, MetodoPagoSalida.class);
     }
@@ -82,8 +83,8 @@ public class MetodoPagoService implements IMetodoPagoService {
 
     @Override
     public List<MetodoPago> findByMetodoPagoContainingIgnoreCaseOrDescripcionContainingIgnoreCaseOrderByIdDesc(
-            String metodoPago,
-            String descripcion) {
+                String metodoPago,
+                String descripcion) {
 
         return metodoPagoRepository.findByMetodoPagoContainingIgnoreCaseOrDescripcionContainingIgnoreCaseOrderByIdDesc(
                 metodoPago,

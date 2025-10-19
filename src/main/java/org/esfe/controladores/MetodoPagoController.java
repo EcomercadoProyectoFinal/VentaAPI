@@ -26,13 +26,13 @@ public class MetodoPagoController {
     private IMetodoPagoService metodoPagoService;
 
     @Autowired
-    private ModelMapper modelMapper; // Aunque no se usa directamente en este controller, se mantiene por consistencia.
+    private ModelMapper modelMapper; 
 
-    // ✅ OPERACIONES DE LECTURA - Públicas
+    // OPERACIONES DE LECTURA - Públicas
 
     /**
      * Obtiene todos los métodos de pago con paginación.
-     * GET /api/metodos-pago?page=0&size=10&sort=id,desc
+     * Si no hay contenido, devuelve 404 (manejado en el controlador).
      */
     @GetMapping
     public ResponseEntity<Page<MetodoPagoSalida>> mostrarTodosPaginados(Pageable pageable) {
@@ -40,12 +40,12 @@ public class MetodoPagoController {
         if (metodosPago.hasContent()) {
             return ResponseEntity.ok(metodosPago);
         }
-        return ResponseEntity.notFound().build();
+        // Devolvemos 404 si la página está vacía, para la lista paginada.
+        return ResponseEntity.notFound().build(); 
     }
 
     /**
      * Obtiene todos los métodos de pago en una lista sin paginación.
-     * GET /api/metodos-pago/lista
      */
     @GetMapping("/lista")
     public ResponseEntity<List<MetodoPagoSalida>> mostrarTodos() {
@@ -53,30 +53,25 @@ public class MetodoPagoController {
         if (!metodosPago.isEmpty()) {
             return ResponseEntity.ok(metodosPago);
         }
-        return ResponseEntity.notFound().build();
+        // Devolvemos 404 si la lista está vacía.
+        return ResponseEntity.notFound().build(); 
     }
 
     /**
      * Obtiene un método de pago por su ID.
-     * GET /api/metodos-pago/{id}
+     * Si no se encuentra, el servicio lanza RecursoNoEncontradoException,
+     * y el GlobalExceptionHandler devuelve el 404 con mensaje.
      */
     @GetMapping("/{id}")
     public ResponseEntity<MetodoPagoSalida> mostrarPorId(@PathVariable Integer id) {
-        try {
-            MetodoPagoSalida metodoPago = metodoPagoService.obtenerPorId(id);
-            return ResponseEntity.ok(metodoPago);
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        MetodoPagoSalida metodoPago = metodoPagoService.obtenerPorId(id);
+        return ResponseEntity.ok(metodoPago);
     }
 
-    // ---
-
-    // ✅ OPERACIONES DE ESCRITURA - Privadas (requieren autenticación y autorización)
+    // OPERACIONES DE ESCRITURA - Privadas
 
     /**
      * Crea un nuevo método de pago.
-     * POST /api/metodos-pago
      */
     @PostMapping
     public ResponseEntity<MetodoPagoSalida> crear(@Valid @RequestBody MetodoPagoGuardar metodoPagoGuardar) {
@@ -87,65 +82,45 @@ public class MetodoPagoController {
 
     /**
      * Edita un método de pago existente.
-     * PUT /api/metodos-pago
-     */
-    /**
-     * Edita un método de pago existente.
-     * PUT /api/metodos-pago/{id}
+     * Si no se encuentra el ID, el servicio lanza la excepción y el Global Handler se encarga.
      */
     @PutMapping("/{id}")
     public ResponseEntity<MetodoPagoSalida> editar(
             @PathVariable Integer id,
             @Valid @RequestBody MetodoPagoModificar metodoPagoModificar) {
 
-        try {
-            // Establecer el ID del path en el DTO para el servicio
-            metodoPagoModificar.setId(id);
-
-            MetodoPagoSalida metodoPagoEditado = metodoPagoService.editar(metodoPagoModificar);
-            return ResponseEntity.ok(metodoPagoEditado);
-        } catch (RuntimeException e) {
-            // Se lanza una RuntimeException si el ID no existe en el servicio.
-            return ResponseEntity.notFound().build();
-        }
+        // Establecer el ID del path en el DTO para el servicio
+        metodoPagoModificar.setId(id);
+        
+        MetodoPagoSalida metodoPagoEditado = metodoPagoService.editar(metodoPagoModificar);
+        return ResponseEntity.ok(metodoPagoEditado);
     }
 
     /**
      * Elimina un método de pago por su ID.
-     * DELETE /api/metodos-pago/{id}
+     * Si no se encuentra el ID, el servicio lanza la excepción y el Global Handler se encarga.
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarPorId(@PathVariable Integer id) {
-        try {
-            metodoPagoService.eliminarPorId(id);
-            // Retorna 204 No Content
-            return ResponseEntity.noContent().build();
-        } catch (RuntimeException e) {
-            // Se lanza una RuntimeException si el ID no existe en el servicio.
-            return ResponseEntity.notFound().build();
-        }
+        metodoPagoService.eliminarPorId(id);
+        return ResponseEntity.noContent().build();
     }
 
-    // ---
-
-    // ✅ OPERACIONES DE BÚSQUEDA - Públicas
+    // OPERACIONES DE BÚSQUEDA - Públicas
 
     /**
      * Busca métodos de pago por nombre o descripción.
-     * GET /api/metodos-pago/buscar?nombre=Efectivo&descripcion=Pago%20en%20mano
      */
     @GetMapping("/buscar")
     public ResponseEntity<List<MetodoPagoSalida>> buscarMetodosPago(
             @RequestParam(required = false) String nombre,
             @RequestParam(required = false) String descripcion) {
 
-        // Llamamos al método de servicio que implementa la lógica de búsqueda
         List<MetodoPago> metodosPago = metodoPagoService.findByMetodoPagoContainingIgnoreCaseOrDescripcionContainingIgnoreCaseOrderByIdDesc(
                 nombre,
                 descripcion
         );
 
-        // Convertir la lista de entidades a DTOs de salida
         List<MetodoPagoSalida> metodosPagoSalida = metodosPago.stream()
                 .map(metodoPago -> modelMapper.map(metodoPago, MetodoPagoSalida.class))
                 .collect(Collectors.toList());

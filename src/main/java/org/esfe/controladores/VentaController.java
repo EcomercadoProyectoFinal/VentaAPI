@@ -22,7 +22,6 @@ public class VentaController {
 
     /**
      * Obtiene todas las ventas con paginación y orden DESC por ID.
-     * GET /api/ventas?page=0&size=10
      */
     @GetMapping
     public ResponseEntity<Page<VentaSalida>> mostrarTodasPaginadas(Pageable pageable) {
@@ -35,34 +34,26 @@ public class VentaController {
 
     /**
      * Obtiene una venta por su ID.
+     * Si no se encuentra, el servicio lanza RecursoNoEncontradoException (404 Global Handler).
      */
     @GetMapping("/{id}")
     public ResponseEntity<VentaSalida> mostrarPorId(@PathVariable Integer id) {
-        try {
-            VentaSalida venta = ventaService.obtenerPorId(id);
-            return ResponseEntity.ok(venta);
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        VentaSalida venta = ventaService.obtenerPorId(id);
+        return ResponseEntity.ok(venta);
     }
 
     /**
      * Crea una nueva venta (realizada por un cliente).
+     * Los errores de validación (@Valid) o RecursoNoEncontrado (Método de Pago) 
+     * son manejados por el GlobalExceptionHandler.
      */
     @PostMapping
     public ResponseEntity<VentaSalida> crear(@Valid @RequestBody VentaGuardar ventaGuardar) {
-        try {
-            VentaSalida nuevaVenta = ventaService.crear(ventaGuardar);
-            return new ResponseEntity<>(nuevaVenta, HttpStatus.CREATED);
-        } catch (Exception e) { // Capturará *cualquier* error, incluyendo SQL o ModelMapper
-            // 💡 IMPRIME EL ERROR COMPLETO
-            e.printStackTrace();
-            System.err.println("Mensaje de error: " + e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
+        VentaSalida nuevaVenta = ventaService.crear(ventaGuardar);
+        return new ResponseEntity<>(nuevaVenta, HttpStatus.CREATED);
     }
 
-    // BÚSQUEDAS POR ROL (Utilizando IDs de la sesión)
+    // BÚSQUEDAS POR ROL
 
     /**
      * CLIENTE: Obtiene las compras de un usuario/cliente específico.
@@ -70,7 +61,7 @@ public class VentaController {
     @GetMapping("/cliente/{usuarioId}")
     public ResponseEntity<Page<VentaSalida>> mostrarVentasPorClientePaginado(
             @PathVariable Long usuarioId,
-            Pageable pageable) { // Spring lo inyecta automáticamente de los Query Params
+            Pageable pageable) { 
 
         Page<VentaSalida> ventas = ventaService.obtenerVentasPorClientePaginado(usuarioId, pageable);
         if (ventas.hasContent()) {
@@ -81,7 +72,6 @@ public class VentaController {
 
     /**
      * Obtiene las ventas realizadas por una empresa específica.
-     * GET /api/ventas/empresa/{idEmpresaVendedora}?page=0&size=10
      */
     @GetMapping("/empresa/{idEmpresaVendedora}")
     public ResponseEntity<Page<VentaSalida>> mostrarVentasPorEmpresaPaginado(
@@ -97,7 +87,6 @@ public class VentaController {
 
     /**
      * Obtiene las ventas gestionadas por un broker específico.
-     * GET /api/ventas/broker/{idBroker}?page=0&size=10
      */
     @GetMapping("/broker/{idBroker}")
     public ResponseEntity<Page<VentaSalida>> mostrarVentasPorBrokerPaginado(
@@ -115,49 +104,36 @@ public class VentaController {
 
     /**
      * Búsqueda de Venta por Correlativo (para confirmación de pago).
+     * Si no se encuentra, el servicio lanza RecursoNoEncontradoException (404 Global Handler).
      */
     @GetMapping("/correlativo/{correlativo}")
     public ResponseEntity<VentaSalida> mostrarPorCorrelativo(@PathVariable String correlativo) {
-        try {
-            VentaSalida venta = ventaService.obtenerPorCorrelativo(correlativo);
-            return ResponseEntity.ok(venta);
-        } catch (RuntimeException e) {
-            // Se lanza RecursoNoEncontradoException en el servicio
-            return ResponseEntity.notFound().build();
-        }
+        VentaSalida venta = ventaService.obtenerPorCorrelativo(correlativo);
+        return ResponseEntity.ok(venta);
     }
 
     /**
      * Confirma o revierte el pago de una venta (Solo para Empresa).
-     * PUT /api/ventas/{id}/confirmarpago
+     * Si no se encuentra, el servicio lanza RecursoNoEncontradoException (404 Global Handler).
      */
     @PutMapping("/{id}/confirmarpago")
     public ResponseEntity<VentaSalida> confirmarPagoEmpresa(
             @PathVariable Integer id,
             @Valid @RequestBody VentaConfirmacionPago confirmacion) {
-        try {
-            VentaSalida ventaEditada = ventaService.confirmarPagoEmpresa(id, confirmacion);
-            return ResponseEntity.ok(ventaEditada);
-        } catch (RuntimeException e) {
-            // Maneja el caso de Venta no encontrada u otros errores de negocio
-            return ResponseEntity.notFound().build();
-        }
+        
+        VentaSalida ventaEditada = ventaService.confirmarPagoEmpresa(id, confirmacion);
+        return ResponseEntity.ok(ventaEditada);
     }
 
     /**
-     * Actualiza el estado de la venta (e.g., "ENVIADA", "CANCELADA") (Solo para
-     * Empresa).
+     * Actualiza el estado de la venta.
      */
     @PutMapping("/{id}/estado/{nuevoEstado}")
     public ResponseEntity<VentaSalida> actualizarEstadoVenta(
             @PathVariable Integer id,
             @PathVariable String nuevoEstado) {
-        try {
-            VentaSalida ventaEditada = ventaService.actualizarEstadoVenta(id, nuevoEstado);
-            return ResponseEntity.ok(ventaEditada);
-        } catch (RuntimeException e) {
-            // Maneja el caso de Venta no encontrada u otros errores
-            return ResponseEntity.notFound().build();
-        }
+        
+        VentaSalida ventaEditada = ventaService.actualizarEstadoVenta(id, nuevoEstado);
+        return ResponseEntity.ok(ventaEditada);
     }
 }

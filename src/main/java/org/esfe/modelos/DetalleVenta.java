@@ -26,6 +26,9 @@ public class DetalleVenta {
     private Long idProducto; 
 
     @NotNull
+    private String nombreProducto;
+
+    @NotNull
     private Integer cantidad;
 
     @NotNull

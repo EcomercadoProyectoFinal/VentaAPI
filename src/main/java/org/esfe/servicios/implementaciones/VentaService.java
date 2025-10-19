@@ -3,8 +3,10 @@ package org.esfe.servicios.implementaciones;
 import org.esfe.dtos.venta.VentaConfirmacionPago;
 import org.esfe.dtos.venta.VentaGuardar;
 import org.esfe.dtos.venta.VentaSalida;
+import org.esfe.modelos.DetalleVenta; // Importar DetalleVenta
 import org.esfe.modelos.MetodoPago;
 import org.esfe.modelos.Venta;
+import org.esfe.repositorios.IDetalleVentaRepository; // Importar Repositorio DetalleVenta
 import org.esfe.repositorios.IMetodoPagoRepository;
 import org.esfe.repositorios.IVentaRepository;
 import org.esfe.servicios.interfaces.IVentaService;
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference; // Utilidad para el cálculo
 import java.util.stream.Collectors;
 
 // Simulación de una excepción para mantener la coherencia
@@ -40,6 +43,9 @@ public class VentaService implements IVentaService {
     private IMetodoPagoRepository metodoPagoRepository;
 
     @Autowired
+    private IDetalleVentaRepository detalleVentaRepository;
+
+    @Autowired
     private ModelMapper modelMapper;
 
     /** Crea un Pageable que asegura la ordenación DESC por ID. */
@@ -53,7 +59,6 @@ public class VentaService implements IVentaService {
     
     @Override
     public List<VentaSalida> obtenerTodas() {
-        // Para obtener todas y ordenar DESC, usamos Sort
         Sort sort = Sort.by(Sort.Direction.DESC, "id");
         List<Venta> ventas = ventaRepository.findAll(sort); 
         
@@ -64,13 +69,9 @@ public class VentaService implements IVentaService {
 
     @Override
     public Page<VentaSalida> obtenerTodasPaginadas(Pageable pageable) {
-        // Aplicamos el ordenamiento DESC al Pageable recibido
         Pageable sortedPageable = createSortedPageable(pageable);
-        
         Page<Venta> page = ventaRepository.findAll(sortedPageable);
-        
         return page.map(venta -> modelMapper.map(venta, VentaSalida.class));
-        // Usamos page.map() que es más eficiente que crear un PageImpl
     }
 
     @Override
@@ -83,30 +84,52 @@ public class VentaService implements IVentaService {
     @Override
     @Transactional
     public VentaSalida crear(VentaGuardar ventaGuardar) {
-        // 1. Mapear DTO a Entidad
+        // 1. Mapear DTO a Entidad Venta principal
         Venta venta = modelMapper.map(ventaGuardar, Venta.class);
         venta.setId(null);
 
-        // 2. Obtener la entidad MetodoPago y asignarla
+        // 2. Obtener MetodoPago y asignarlo
         MetodoPago metodoPago = metodoPagoRepository.findById(ventaGuardar.getIdMetodoPago())
                 .orElseThrow(() -> new RecursoNoEncontradoException("MétodoPago", "id", ventaGuardar.getIdMetodoPago().toString()));
         venta.setMetodoPago(metodoPago);
 
         // 3. Asignar DATOS AUTOMÁTICOS
         venta.setFecha(LocalDateTime.now());
-        venta.setEstado("PENDIENTE"); // Estado inicial
-        venta.setPagoConfirmadoEmpresa(false); // Por defecto
-        
-        // TODO: Lógica para calcular total (sumando detalles) y generar correlativo único
-        venta.setTotal(new BigDecimal("0.00")); 
+        venta.setEstado("PENDIENTE");
+        venta.setPagoConfirmadoEmpresa(false);
         venta.setCorrelativo("VEN-" + System.currentTimeMillis()); 
 
-        // 4. Guardar y mapear la salida
-        Venta ventaGuardada = ventaRepository.save(venta);
+        // 4. Procesamiento de DetalleVentas y Cálculo del Total
+        AtomicReference<BigDecimal> totalCalculado = new AtomicReference<>(BigDecimal.ZERO);
+
+        List<DetalleVenta> detallesVenta = ventaGuardar.getDetalles().stream()
+            .map(detalleDto -> {
+                DetalleVenta detalle = modelMapper.map(detalleDto, DetalleVenta.class);
+                
+                // Cálculo del subtotal: cantidad * precioUnitario
+                BigDecimal subtotal = detalle.getPrecioUnitario().multiply(new BigDecimal(detalle.getCantidad()));
+                detalle.setSubtotal(subtotal);
+                
+                // Acumular el total
+                totalCalculado.updateAndGet(current -> current.add(subtotal));
+
+                return detalle;
+            })
+            .collect(Collectors.toList());
+            
+        // Asignar el total calculado a la Venta principal
+        venta.setTotal(totalCalculado.get());
+        
+        // 5. Guardar Venta principal para obtener su ID
+        Venta ventaGuardada = ventaRepository.save(venta); 
+        
+        // 6. Asignar la referencia de Venta a cada detalle y guardarlos
+        detallesVenta.forEach(detalle -> detalle.setVenta(ventaGuardada));
+        detalleVentaRepository.saveAll(detallesVenta); // Guardar todos los detalles en lote
+
+        // 7. Mapear la salida (ModelMapper mapeará VentaGuardada a VentaSalida, incluyendo la lista de detalles)
         return modelMapper.map(ventaGuardada, VentaSalida.class);
     }
-
-    //  Operaciones de Búsqueda por Rol (Paginadas y Ordenadas) 
 
     @Override
     public Page<VentaSalida> obtenerVentasPorClientePaginado(Long usuarioId, Pageable pageable) {
@@ -136,8 +159,6 @@ public class VentaService implements IVentaService {
         return modelMapper.map(venta, VentaSalida.class);
     }
 
-    //  Operaciones Críticas del Negocio (Empresa) 
-
     @Override
     @Transactional
     public VentaSalida confirmarPagoEmpresa(Integer id, VentaConfirmacionPago confirmacion) {
@@ -145,13 +166,11 @@ public class VentaService implements IVentaService {
             throw new RecursoNoEncontradoException("Venta", "id", id.toString());
         }
 
-        // Ejecutar la actualización eficiente con @Modifying
         ventaRepository.actualizarConfirmacionPagoEmpresa(
             id, 
             confirmacion.getPagoConfirmadoEmpresa()
         );
 
-        // Recargar y devolver el estado actual de la venta
         Venta ventaActualizada = ventaRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Error al recargar la venta después de actualizar.")); 
         return modelMapper.map(ventaActualizada, VentaSalida.class);
@@ -164,10 +183,8 @@ public class VentaService implements IVentaService {
             throw new RecursoNoEncontradoException("Venta", "id", id.toString());
         }
 
-        // Ejecutar la actualización eficiente con @Modifying
         ventaRepository.actualizarEstadoVenta(id, nuevoEstado);
         
-        // Recargar y devolver el estado actual de la venta
         Venta ventaActualizada = ventaRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Error al recargar la venta después de actualizar el estado."));
         return modelMapper.map(ventaActualizada, VentaSalida.class);

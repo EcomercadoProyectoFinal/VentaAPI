@@ -7,6 +7,8 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import java.util.List;
+
 @Getter
 @Setter
 @Entity
@@ -42,4 +44,8 @@ public class Venta {
     private Long idEmpresaVendedora;
 
     private Long idBroker;
+
+    // Entidad Venta.java
+    @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private List<DetalleVenta> detalles;
 }

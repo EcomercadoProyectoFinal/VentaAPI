@@ -3,9 +3,12 @@ package org.esfe.dtos.venta;
 import lombok.Getter;
 import lombok.Setter;
 
+import org.esfe.dtos.detallesVentas.DetalleVentaSalida;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
+import java.util.List;
 
 @Getter
 @Setter
@@ -30,4 +33,5 @@ public class VentaSalida implements Serializable {
     private Integer idMetodoPago;
     private String nombreMetodoPago;
     
+    private List<DetalleVentaSalida> detalles;
 }
